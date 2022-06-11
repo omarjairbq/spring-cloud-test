@@ -1,0 +1,64 @@
+resilience4j:
+  circuitbreaker:
+    configs:
+      defecto:
+        sliding-window-size: 6
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 20s
+        permitted-number-of-calls-in-half-open-state: 4
+        slow-call-rate-threshold: 50
+        slow-call-duration-threshold: 2s
+    instances:
+      productos:
+        base-config: defecto
+  timelimiter:
+    configs:
+      defecto:
+        timeout-duration: 2s
+    instances:
+      productos:
+        base-config: defecto
+
+spring:
+  cloud:
+    gateway:
+      routes:
+      - id: servicio-oauth
+        uri: lb://servicio-oauth
+        predicates:
+          - Path=/api/security/**
+        filters:
+          - StripPrefix=2
+      - id: servicio-usuarios
+        uri: lb://servicio-usuarios
+        predicates:
+          - Path=/api/msv-usuarios/**
+        filters:
+          - StripPrefix=2
+      - id: servicio-productos
+        uri: lb://servicio-productos
+        predicates:
+          - Path=/api/msv-productos/**
+          - Method=GET, POST, PUT, DELETE
+        filters:
+          - StripPrefix=2
+          - EjemploCookie=Hola mensaje personalizado, usuario
+          - name: CircuitBreaker
+            args:
+              name: productos
+              statusCodes: 500
+              fallbackUri: forward:/api/msv-items/items/1/cantidad/3
+          #- name: Ejemplo
+            #args:
+              #mensaje: Hola mensaje personalizado
+              #cookieKey: usuario
+              #cookieValue: TEST
+      - id: servicio-item
+        uri: lb://servicio-item
+        predicates:
+          - Path=/api/msv-items/**
+        filters:
+          - StripPrefix=2
+          - AddRequestHeader=token-request, 123456
+          - AddResponseHeader=token-response, 123456
+          - AddRequestParameter=user, OBBALBUE
