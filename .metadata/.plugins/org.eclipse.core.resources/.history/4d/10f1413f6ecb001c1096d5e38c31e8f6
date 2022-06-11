@@ -1,0 +1,89 @@
+package mx.com.omarjbq.item.controller;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import lombok.extern.slf4j.Slf4j;
+import mx.com.omarjbq.item.model.Item;
+import mx.com.omarjbq.item.model.Producto;
+import mx.com.omarjbq.item.service.ItemService;
+
+/**
+ * Controlador de items.
+ * 
+ * @author Omar Balbuena
+ *
+ */
+@RestController
+@Slf4j
+public class ItemController {
+
+	@Autowired
+	private CircuitBreakerFactory cvFactory;
+
+	/**
+	 * Servicio de items.
+	 */
+	private ItemService service;
+
+	/**
+	 * Constructor
+	 * 
+	 * @param service
+	 */
+	public ItemController(@Qualifier("itemServiceRestTemplate") ItemService service) {
+		this.service = service;
+	}
+
+	/**
+	 * Consulta de items.
+	 * 
+	 * @return List<Item>
+	 */
+	@GetMapping(value = "/items")
+	public List<Item> obtenerItems(@RequestParam(name = "user", required = false) String user,
+			@RequestHeader(name = "token-request", required = false) String token) {
+		log.info("REQUEST PARAM: {}", user);
+		log.info("REQUEST HEADER: {}", token);
+		return this.service.obtenerItems();
+	}
+
+	/**
+	 * Consulta de un item.
+	 * 
+	 * @param id       identificador
+	 * @param cantidad cantidad
+	 * @return Item
+	 */
+	// @HystrixCommand(fallbackMethod = "metodoAlternativo")
+	@GetMapping(value = "/items/{id}/cantidad/{cantidad}")
+	public Item obtenerItem(@PathVariable("id") Long id, @PathVariable("cantidad") Long cantidad) {
+		return cvFactory.create("items").run(() -> this.service.obtenerItemPorProductoId(id, cantidad));//,
+				//ex -> this.metodoAlternativo(id, cantidad, ex));
+	}
+
+	/**
+	 * Método alternativo hystrix
+	 * 
+	 * @param id       identificador
+	 * @param cantidad cantidad
+	 * @return Item
+	 */
+	public Item metodoAlternativo(Long id, Long cantidad, Throwable ex) {
+		log.error("Error detalle circuitbreaker: {}", ex);
+
+		Producto producto = new Producto();
+		producto.setId(id);
+		producto.setNombre("Cámara Sony");
+		producto.setPrecio(500.00);
+		return new Item(producto, cantidad);
+	}
+}

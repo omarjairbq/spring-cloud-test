@@ -1,0 +1,22 @@
+package mx.com.omarjbq.item.service.impl;
+
+import java.util.List;
+
+import mx.com.omarjbq.item.model.Item;
+import mx.com.omarjbq.item.service.ItemService;
+
+public class ItemServiceFeignImpl implements ItemService {
+
+	@Override
+	public List<Item> obtenerItems() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Item obtenerItemPorProductoId(Long id, Long cantidad) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+}
